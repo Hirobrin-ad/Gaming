@@ -3,70 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Сайт в разработке</title>
+<title>Игра в разработке</title>
 <style>
-  :root {
-    --night: #0d1b2e;
-    --night-2: #16304d;
-    --snow: #eef4fb;
-    --muted: #9db3cc;
-    --glow: #ffd9a0;
-    --btn: #2aabee;
-    --btn-hover: #1d8fcb;
-  }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
-    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-    color: var(--snow);
-    background: radial-gradient(ellipse at 50% 0%, var(--night-2), var(--night) 70%);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #12121a;
+    color: #f2f2f7;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 24px;
-    overflow: hidden;
+    text-align: center;
   }
-  .snow { position: fixed; inset: 0; pointer-events: none; }
-  .snow i {
-    position: absolute; top: -10px;
-    width: 5px; height: 5px; border-radius: 50%;
-    background: #fff; opacity: .7;
-    animation: fall linear infinite;
-  }
-  @keyframes fall { to { transform: translateY(110vh); } }
-  main { position: relative; text-align: center; max-width: 480px; }
-  h1 { font-size: clamp(30px, 8vw, 44px); margin: 0 0 16px; font-weight: 700; }
-  p { margin: 0 0 12px; line-height: 1.55; color: var(--muted); font-size: 18px; }
+  main { max-width: 460px; }
+  .icon { font-size: 64px; margin-bottom: 12px; }
+  h1 { margin: 0 0 12px; font-size: clamp(30px, 8vw, 42px); }
+  p { margin: 0 0 24px; font-size: 18px; line-height: 1.5; color: #a7a7b8; }
   .btn {
-    display: inline-block; margin-top: 20px;
-    padding: 14px 28px; border-radius: 999px;
-    background: var(--btn); color: #fff;
-    text-decoration: none; font-weight: 600; font-size: 17px;
-    box-shadow: 0 0 24px rgba(255, 217, 160, .25);
+    display: inline-block;
+    padding: 14px 28px;
+    background: #7c5cff;
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 17px;
+    text-decoration: none;
     transition: background .2s;
   }
-  .btn:hover { background: var(--btn-hover); }
-  .btn:focus-visible { outline: 3px solid var(--glow); outline-offset: 3px; }
-  @media (prefers-reduced-motion: reduce) { .snow { display: none; } }
+  .btn:hover { background: #6a49f0; }
+  .btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 </style>
 </head>
 <body>
-  <div class="snow" id="snow" aria-hidden="true"></div>
   <main>
-    <h1>Сайт в разработке</h1>
-    <p>Здесь скоро что-то появится. Загляните позже.</p>
+    <div class="icon">🎮</div>
+    <h1>Игра в разработке</h1>
+    <p>Здесь скоро появится игра. Заходите позже.</p>
     <a class="btn" href="https://t.me/ArtemLilpip" target="_blank" rel="noopener">Написать в Telegram</a>
   </main>
-  <script>
-    var s = document.getElementById('snow');
-    for (var i = 0; i < 40; i++) {
-      var f = document.createElement('i');
-      f.style.left = Math.random() * 100 + 'vw';
-      f.style.animationDuration = (8 + Math.random() * 10) + 's';
-      f.style.animationDelay = (-Math.random() * 18) + 's';
-      f.style.opacity = (0.3 + Math.random() * 0.5).toFixed(2);
-      s.appendChild(f);
-    }
-  </script>
 </body>
 </html>
