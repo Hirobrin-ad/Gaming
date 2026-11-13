@@ -2,59 +2,223 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Игра в разработке</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Собери двигатель</title>
 <style>
-  :root {
-    --bg: #1b2430;
-    --brass: #b08d57;
-    --steel: #5f7a8a;
-    --text: #f1e9d8;
-    --muted: #a9b4bf;
+  body { --bg:#1b2430; --panel:#26323f; --text:#f1e9d8; --muted:#a9b4bf; --accent:#b08d57; background:var(--bg); }
+  body[data-theme=light] { --bg:#f3efe6; --panel:#fff; --text:#1d2733; --muted:#5a6672; --accent:#a0743a; }
+  body[data-theme=rainbow] {
+    --panel:rgba(255,255,255,.78); --text:#111; --muted:#333; --accent:#6a3de8;
+    background:linear-gradient(120deg,#ff5f6d,#ffc371,#fff56d,#6dff9c,#6dc7ff,#b46dff,#ff5f6d);
+    background-size:300% 300%; animation:rb 10s linear infinite;
   }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
+  @keyframes rb { to { background-position:150% 50%; } }
+  * { box-sizing:border-box; }
   body {
-    font-family: Georgia, "Times New Roman", serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    text-align: center;
-    overflow: hidden;
+    margin:0; min-height:100vh; padding:12px; color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    display:flex; flex-direction:column; align-items:center; gap:10px; user-select:none;
   }
-  .gear { position: fixed; display: block; z-index: 0; animation: spin 24s linear infinite; }
-  .g1 { width: 300px; height: 300px; top: -110px; left: -110px; color: var(--brass); }
-  .g2 { width: 190px; height: 190px; top: 120px; left: 120px; color: var(--steel); animation-direction: reverse; animation-duration: 15s; }
-  .g3 { width: 260px; height: 260px; bottom: -90px; right: -90px; color: var(--steel); animation-duration: 30s; }
-  .g4 { width: 150px; height: 150px; bottom: 100px; right: 130px; color: var(--brass); animation-direction: reverse; animation-duration: 19s; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  main { position: relative; z-index: 1; max-width: 460px; }
-  h1 { margin: 0 0 14px; font-size: clamp(32px, 8vw, 46px); font-weight: 700; letter-spacing: .5px; }
-  p { margin: 0; font-size: 19px; line-height: 1.55; color: var(--muted); }
-  @media (prefers-reduced-motion: reduce) { .gear { animation: none; } }
+  h1 { margin:2px 0 0; font-size:24px; }
+  .bar { display:flex; gap:16px; font-size:15px; flex-wrap:wrap; justify-content:center; }
+  .msg { min-height:20px; color:var(--muted); text-align:center; max-width:400px; font-size:14px; }
+  details { width:min(94vw,400px); background:var(--panel); border-radius:10px; padding:8px 12px; font-size:14px; }
+  summary { cursor:pointer; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+  button { font-family:inherit; cursor:pointer; }
+  .chip { background:transparent; color:var(--text); border:2px solid var(--accent); border-radius:999px; padding:4px 12px; font-size:14px; }
+  .chip.on { background:var(--accent); color:#fff; }
+  #stage { position:relative; width:min(94vw,400px); aspect-ratio:5/7; background:var(--panel); border-radius:14px; overflow:hidden; touch-action:none; }
+  .eng { position:absolute; left:3%; top:1.5%; width:94%; height:47%; border:3px solid var(--accent); border-radius:16px; }
+  #stage.run .eng { animation:run .12s infinite; }
+  @keyframes run { 0%{transform:translate(1px,1px)} 50%{transform:translate(-1px,0)} 100%{transform:translate(0,-1px)} }
+  .sock {
+    position:absolute; width:42%; height:8%; border:2px dashed var(--accent); border-radius:8px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:11.5px; line-height:1.15; text-align:center; color:var(--muted);
+  }
+  .sock b { color:var(--text); }
+  body:not(.hint) .sock b { display:none; }
+  .sock.glow { background:rgba(255,210,63,.35); border-style:solid; }
+  .sock.done { border:2px solid #3f9b63; background:rgba(63,155,99,.25); }
+  .sock.done * { visibility:hidden; }
+  .sock.shake { animation:sh .35s; border-color:#d9534f; }
+  @keyframes sh { 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  .part {
+    position:absolute; width:38%; height:8%; border:2px solid var(--accent); border-radius:8px;
+    background:var(--panel); color:var(--text); font-size:13px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; cursor:grab; touch-action:none;
+    box-shadow:0 2px 6px rgba(0,0,0,.3); z-index:2;
+  }
+  .part.drag { cursor:grabbing; z-index:5; transform:scale(1.06); }
+  .part.done { cursor:default; border-color:#3f9b63; box-shadow:none; z-index:1; }
+  .main { display:none; background:var(--accent); color:#fff; border:0; border-radius:999px; padding:10px 22px; font-size:16px; font-weight:700; }
+  @media (prefers-reduced-motion:reduce) { body[data-theme=rainbow], #stage.run .eng, .sock.shake { animation:none; } }
 </style>
 </head>
-<body>
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="gear" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="10" stroke-dasharray="9.948 9.948"/>
-      <circle cx="50" cy="50" r="34" fill="currentColor"/>
-      <circle cx="50" cy="50" r="24" fill="none" stroke="var(--bg)" stroke-width="3"/>
-      <circle cx="50" cy="50" r="10" fill="var(--bg)"/>
-    </symbol>
-  </svg>
+<body data-theme="dark">
+  <h1>⚙️ Собери двигатель</h1>
+  <div class="bar">
+    <span id="lvl">Уровень 1/3</span>
+    <span>Время: <b id="time">0</b> с</span>
+    <span>Ошибки: <b id="err">0</b></span>
+    <span>Рекорд: <b id="best">—</b></span>
+  </div>
+  <details>
+    <summary>⚙ Настройки</summary>
+    <div class="row">
+      Фон:
+      <button class="chip" data-t="dark">Тёмный</button>
+      <button class="chip" data-t="light">Светлый</button>
+      <button class="chip" data-t="rainbow">Радужный</button>
+    </div>
+    <div class="row">
+      <button class="chip" id="hintBtn">Подсказки: выкл</button>
+      <button class="chip" id="shuffleBtn">Перемешать детали</button>
+    </div>
+  </details>
+  <div class="msg" id="msg"></div>
+  <div id="stage"><div class="eng"></div></div>
+  <button class="main" id="next"></button>
+<script>
+const P = {
+  plug:  {n:'Свечи',     i:'⚡',  f:'Поджигает смесь',     x:27, y:8},
+  cam:   {n:'Распредвал',i:'🌀', f:'Открывает клапаны',   x:27, y:18},
+  head:  {n:'Головка',   i:'🔲', f:'Крышка цилиндров',    x:27, y:28},
+  block: {n:'Блок',      i:'🧱', f:'Корпус цилиндров',    x:27, y:38},
+  piston:{n:'Поршни',    i:'🔘', f:'Сжимает смесь',       x:73, y:8},
+  rod:   {n:'Шатуны',    i:'🔩', f:'Связь с коленвалом',  x:73, y:18},
+  crank: {n:'Коленвал',  i:'⚙️', f:'Даёт вращение',       x:73, y:28},
+  pan:   {n:'Поддон',    i:'🛢️', f:'Собирает масло',      x:73, y:38}
+};
+const LEVELS = [
+  ['block','piston','crank','pan'],
+  ['block','piston','crank','pan','plug','head'],
+  Object.keys(P)
+];
+const PW = 38, PH = 8;
+const $ = id => document.getElementById(id), stage = $('stage');
+let level = 0, ids = [], socks = {}, placed = 0, errors = 0, t0 = 0, timer = null;
+let set = {theme:'dark', hint:false};
+try { Object.assign(set, JSON.parse(localStorage.getItem('engSet') || '{}')); } catch (e) {}
 
-  <svg class="gear g1" aria-hidden="true"><use href="#gear"/></svg>
-  <svg class="gear g2" aria-hidden="true"><use href="#gear"/></svg>
-  <svg class="gear g3" aria-hidden="true"><use href="#gear"/></svg>
-  <svg class="gear g4" aria-hidden="true"><use href="#gear"/></svg>
+function save() { try { localStorage.setItem('engSet', JSON.stringify(set)); } catch (e) {} }
+function applySet() {
+  document.body.dataset.theme = set.theme;
+  document.body.classList.toggle('hint', set.hint);
+  $('hintBtn').textContent = 'Подсказки: ' + (set.hint ? 'вкл' : 'выкл');
+  $('hintBtn').classList.toggle('on', set.hint);
+  document.querySelectorAll('[data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === set.theme));
+}
+document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { set.theme = b.dataset.t; applySet(); save(); });
+$('hintBtn').onclick = () => { set.hint = !set.hint; applySet(); save(); };
+$('shuffleBtn').onclick = () => build();
 
-  <main>
-    <h1>Игра в разработке</h1>
-    <p>Механизм ещё собирается. Загляните сюда позже.</p>
-  </main>
+function shuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function bestKey() { return 'engBest' + level; }
+function showBest() {
+  let b = null;
+  try { b = +localStorage.getItem(bestKey()) || null; } catch (e) {}
+  $('best').textContent = b ? b + ' с' : '—';
+}
+function start() {
+  if (t0) return;
+  t0 = Date.now();
+  timer = setInterval(() => $('time').textContent = Math.floor((Date.now() - t0) / 1000), 250);
+}
+function build() {
+  clearInterval(timer); timer = null; t0 = 0; placed = 0; errors = 0;
+  $('time').textContent = 0; $('err').textContent = 0; $('next').style.display = 'none';
+  $('lvl').textContent = 'Уровень ' + (level + 1) + '/' + LEVELS.length;
+  $('msg').textContent = 'Перетащи детали на свои места. Подсказка на месте: что делает деталь.';
+  stage.classList.remove('run');
+  stage.querySelectorAll('.sock,.part').forEach(e => e.remove());
+  showBest();
+  ids = LEVELS[level]; socks = {};
+  ids.forEach(id => {
+    const s = document.createElement('div');
+    s.className = 'sock';
+    s.style.left = (P[id].x - 21) + '%'; s.style.top = (P[id].y - PH / 2) + '%';
+    s.innerHTML = '<span>' + P[id].f + '</span><b>' + P[id].n + '</b>';
+    stage.appendChild(s); socks[id] = s;
+  });
+  const used = [];
+  shuffle(ids).forEach(id => {
+    let x, y, tries = 0;
+    do {
+      x = Math.random() * 62; y = 52 + Math.random() * 38; tries++;
+    } while (tries < 60 && used.some(u => Math.abs(u.x - x) < PW && Math.abs(u.y - y) < PH + 1));
+    used.push({x, y});
+    makePart(id, x, y);
+  });
+}
+function makePart(id, hx, hy) {
+  const el = document.createElement('div');
+  el.className = 'part'; el.textContent = P[id].i + ' ' + P[id].n;
+  el.style.left = hx + '%'; el.style.top = hy + '%';
+  stage.appendChild(el);
+  let off = {x:0, y:0};
+  el.addEventListener('pointerdown', e => {
+    if (el.classList.contains('done')) return;
+    start();
+    const b = el.getBoundingClientRect();
+    off = {x: e.clientX - b.left, y: e.clientY - b.top};
+    el.setPointerCapture(e.pointerId); el.classList.add('drag');
+    if (set.hint) socks[id].classList.add('glow');
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', e => {
+    if (!el.classList.contains('drag')) return;
+    const r = stage.getBoundingClientRect();
+    el.style.left = ((e.clientX - off.x - r.left) / r.width * 100) + '%';
+    el.style.top = ((e.clientY - off.y - r.top) / r.height * 100) + '%';
+  });
+  const drop = () => {
+    if (!el.classList.contains('drag')) return;
+    el.classList.remove('drag'); socks[id].classList.remove('glow');
+    const r = stage.getBoundingClientRect();
+    const cx = (parseFloat(el.style.left) + PW / 2) / 100 * r.width;
+    const cy = (parseFloat(el.style.top) + PH / 2) / 100 * r.height;
+    let near = null, nd = 1e9;
+    ids.forEach(k => {
+      if (socks[k].classList.contains('done')) return;
+      const d = Math.hypot(cx - P[k].x / 100 * r.width, cy - P[k].y / 100 * r.height);
+      if (d < nd) { nd = d; near = k; }
+    });
+    if (!near || nd > r.width * 0.16) return;
+    if (near === id) {
+      el.style.left = (P[id].x - PW / 2) + '%'; el.style.top = (P[id].y - PH / 2) + '%';
+      el.classList.add('done'); socks[id].classList.add('done');
+      placed++; $('msg').textContent = 'Верно!';
+      if (placed === ids.length) win();
+    } else {
+      errors++; $('err').textContent = errors;
+      const s = socks[near]; s.classList.remove('shake'); void s.offsetWidth; s.classList.add('shake');
+      el.style.left = hx + '%'; el.style.top = hy + '%';
+      $('msg').textContent = 'Не подходит. Подумай, что делает эта деталь.';
+    }
+  };
+  el.addEventListener('pointerup', drop);
+  el.addEventListener('pointercancel', drop);
+}
+function win() {
+  clearInterval(timer);
+  const sec = Math.max(1, Math.round((Date.now() - t0) / 1000));
+  $('time').textContent = sec; stage.classList.add('run');
+  let b = null;
+  try { b = +localStorage.getItem(bestKey()) || null; } catch (e) {}
+  if (!b || sec < b) { try { localStorage.setItem(bestKey(), sec); } catch (e) {} showBest(); }
+  const last = level === LEVELS.length - 1;
+  $('msg').textContent = (last ? 'Все уровни пройдены! ' : 'Двигатель заведён! ') + sec + ' с, ошибок: ' + errors + '.';
+  $('next').textContent = last ? 'Играть заново' : 'Следующий уровень →';
+  $('next').style.display = 'inline-block';
+}
+$('next').onclick = () => { level = level === LEVELS.length - 1 ? 0 : level + 1; build(); };
+applySet(); build();
+</script>
 </body>
 </html>
