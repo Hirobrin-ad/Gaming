@@ -28,6 +28,7 @@
   button { font-family:inherit; cursor:pointer; }
   .chip { background:transparent; color:var(--text); border:2px solid var(--accent); border-radius:999px; padding:4px 12px; font-size:14px; }
   .chip.on { background:var(--accent); color:#fff; }
+  .chip:disabled { opacity:.5; cursor:default; }
   #stage { position:relative; width:min(94vw,400px); aspect-ratio:5/7; background:var(--panel); border-radius:14px; overflow:hidden; touch-action:none; }
   .eng { position:absolute; left:3%; top:1.5%; width:94%; height:47%; border:3px solid var(--accent); border-radius:16px; }
   #stage.run .eng { animation:run .12s infinite; }
@@ -39,7 +40,6 @@
   }
   .sock b { color:var(--text); }
   body:not(.hint) .sock b { display:none; }
-  .sock.glow { background:rgba(255,210,63,.35); border-style:solid; }
   .sock.done { border:2px solid #3f9b63; background:rgba(63,155,99,.25); }
   .sock.done * { visibility:hidden; }
   .sock.shake { animation:sh .35s; border-color:#d9534f; }
@@ -73,10 +73,10 @@
       <button class="chip" data-t="rainbow">Радужный</button>
     </div>
     <div class="row">
-      <button class="chip" id="hintBtn">Подсказки: выкл</button>
       <button class="chip" id="shuffleBtn">Перемешать детали</button>
     </div>
   </details>
+  <button class="chip" id="hintBtn">💡 Подсказка: 1</button>
   <div class="msg" id="msg"></div>
   <div id="stage"><div class="eng"></div></div>
   <button class="main" id="next"></button>
@@ -96,23 +96,36 @@ const LEVELS = [
   ['block','piston','crank','pan','plug','head'],
   Object.keys(P)
 ];
-const PW = 38, PH = 8;
+const PW = 38, PH = 8, HINT_MS = 5000;
 const $ = id => document.getElementById(id), stage = $('stage');
 let level = 0, ids = [], socks = {}, placed = 0, errors = 0, t0 = 0, timer = null;
-let set = {theme:'dark', hint:false};
-try { Object.assign(set, JSON.parse(localStorage.getItem('engSet') || '{}')); } catch (e) {}
+let hintUsed = false, hintTimer = null;
+let set = {theme:'dark'};
+try { const s = JSON.parse(localStorage.getItem('engSet') || '{}'); if (s.theme) set.theme = s.theme; } catch (e) {}
 
 function save() { try { localStorage.setItem('engSet', JSON.stringify(set)); } catch (e) {} }
 function applySet() {
   document.body.dataset.theme = set.theme;
-  document.body.classList.toggle('hint', set.hint);
-  $('hintBtn').textContent = 'Подсказки: ' + (set.hint ? 'вкл' : 'выкл');
-  $('hintBtn').classList.toggle('on', set.hint);
   document.querySelectorAll('[data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === set.theme));
 }
 document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { set.theme = b.dataset.t; applySet(); save(); });
-$('hintBtn').onclick = () => { set.hint = !set.hint; applySet(); save(); };
-$('shuffleBtn').onclick = () => build();
+$('shuffleBtn').onclick = () => build(true);
+
+function resetHint() {
+  clearTimeout(hintTimer);
+  document.body.classList.remove('hint');
+  hintUsed = false;
+  $('hintBtn').disabled = false;
+  $('hintBtn').textContent = '💡 Подсказка: 1';
+}
+$('hintBtn').onclick = () => {
+  if (hintUsed || placed === ids.length) return;
+  hintUsed = true;
+  $('hintBtn').disabled = true;
+  $('hintBtn').textContent = '💡 Подсказка использована';
+  document.body.classList.add('hint');
+  hintTimer = setTimeout(() => document.body.classList.remove('hint'), HINT_MS);
+};
 
 function shuffle(a) {
   a = a.slice();
@@ -130,11 +143,12 @@ function start() {
   t0 = Date.now();
   timer = setInterval(() => $('time').textContent = Math.floor((Date.now() - t0) / 1000), 250);
 }
-function build() {
+function build(keepHint) {
   clearInterval(timer); timer = null; t0 = 0; placed = 0; errors = 0;
+  if (!keepHint) resetHint();
   $('time').textContent = 0; $('err').textContent = 0; $('next').style.display = 'none';
   $('lvl').textContent = 'Уровень ' + (level + 1) + '/' + LEVELS.length;
-  $('msg').textContent = 'Перетащи детали на свои места. Подсказка на месте: что делает деталь.';
+  $('msg').textContent = 'Перетащи детали на свои места. На уровень даётся одна подсказка.';
   stage.classList.remove('run');
   stage.querySelectorAll('.sock,.part').forEach(e => e.remove());
   showBest();
@@ -168,7 +182,6 @@ function makePart(id, hx, hy) {
     const b = el.getBoundingClientRect();
     off = {x: e.clientX - b.left, y: e.clientY - b.top};
     el.setPointerCapture(e.pointerId); el.classList.add('drag');
-    if (set.hint) socks[id].classList.add('glow');
     e.preventDefault();
   });
   el.addEventListener('pointermove', e => {
@@ -179,7 +192,7 @@ function makePart(id, hx, hy) {
   });
   const drop = () => {
     if (!el.classList.contains('drag')) return;
-    el.classList.remove('drag'); socks[id].classList.remove('glow');
+    el.classList.remove('drag');
     const r = stage.getBoundingClientRect();
     const cx = (parseFloat(el.style.left) + PW / 2) / 100 * r.width;
     const cy = (parseFloat(el.style.top) + PH / 2) / 100 * r.height;
